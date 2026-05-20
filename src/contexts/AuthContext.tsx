@@ -3,7 +3,6 @@ import {
   useCallback,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Profile, Company, CompanyWithRole } from '../types'
 
