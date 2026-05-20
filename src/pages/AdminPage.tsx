@@ -12,7 +12,7 @@ export default function AdminPage() {
   const { profile, selectedCompany, signOut } = useAuth()
   const companyId = selectedCompany?.id ?? ''
   const {
-    rooms, domains, members, reservations, blockedSlots, loading,
+    rooms, domains, members, reservations, blockedSlots,
     fetchAll, addRoom, updateRoom, toggleRoom,
     addDomain, removeDomain,
     updateMemberRole, removeMember,
