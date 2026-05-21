@@ -1,16 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL     = import.meta.env.VITE_SUPABASE_URL     as string
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error('Supabase environment variables eksik. .env.local dosyasini kontrol et.')
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession:    true,
-    autoRefreshToken:  true,
-    detectSessionInUrl: true,
-  },
-})
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)

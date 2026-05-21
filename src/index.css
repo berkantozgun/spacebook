@@ -1,144 +1,110 @@
-@import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
-
-/* =============================================
-   FUSION ROOM — Flormar Brand Tokens
-   ============================================= */
-
-@theme {
-  /* Renkler */
-  --color-flormar-pink:    #E45A80;
-  --color-flormar-black:   #000000;
-  --color-flormar-light:   #FCEEF2;
-  --color-flormar-text:    #0F0F0F;
-  --color-flormar-gray:    #9D9D9D;
-  --color-flormar-border:  #DDDDDD;
-  --color-flormar-error:   #D72B01;
-  --color-flormar-success: #7B9D76;
-  --color-flormar-gold:    #CF9525;
-
-  /* Tipografi */
-  --font-primary: 'Montserrat', sans-serif;
-
-  /* Border Radius */
-  --radius-btn:  0.25rem;
-  --radius-card: 0.75rem;
+:root {
+  --color-primary: #E45A80;
+  --color-primary-light: #FCEEF2;
+  --color-black: #0F0F0F;
+  --color-grey: #9D9D9D;
+  --color-border: #DDDDDD;
+  --color-error: #D72B01;
+  --color-success: #7B9D76;
+  --font-main: 'Montserrat', sans-serif;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
 }
 
-/* =============================================
-   Global Reset & Base
-   ============================================= */
-
-*, *::before, *::after {
-  box-sizing: border-box;
+* {
   margin: 0;
   padding: 0;
-}
-
-html, body, #root {
-  height: 100%;
-  width: 100%;
+  box-sizing: border-box;
 }
 
 body {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.875rem;
-  color: #0F0F0F;
-  background-color: #ffffff;
+  font-family: var(--font-main);
+  background-color: #fff;
+  color: var(--color-black);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* =============================================
-   FUSION Room — Utility Classes
-   ============================================= */
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+button {
+  font-family: var(--font-main);
+}
 
 .btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #E45A80;
-  color: #ffffff;
-  font-family: 'Montserrat', sans-serif;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-main);
   font-weight: 700;
-  font-size: 0.875rem;
   height: 2.875rem;
   padding: 0 1.5rem;
-  border-radius: 0.25rem;
   border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  letter-spacing: 0.03em;
-  transition: background-color 0.2s ease, opacity 0.2s ease;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
 }
 
 .btn-primary:hover {
-  background-color: #d4426c;
+  background: #d64770;
 }
 
 .btn-primary:disabled {
-  opacity: 0.45;
+  background: var(--color-grey);
   cursor: not-allowed;
 }
 
 .btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-  color: #E45A80;
-  font-family: 'Montserrat', sans-serif;
+  background: #fff;
+  color: var(--color-black);
+  font-family: var(--font-main);
   font-weight: 600;
-  font-size: 0.875rem;
   height: 2.875rem;
   padding: 0 1.5rem;
-  border-radius: 0.25rem;
-  border: 1.5px solid #E45A80;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  letter-spacing: 0.03em;
+  font-size: 1rem;
   transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background-color: #FCEEF2;
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
-.card {
-  background: #ffffff;
-  border: 1px solid #DDDDDD;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-}
-
-.card-pink {
-  background: #FCEEF2;
-  border: 1px solid #E45A80;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-}
-
-/* Slot renk kodları */
-.slot-available {
-  background-color: #ffffff;
-  border: 1px solid #DDDDDD;
-  color: #0F0F0F;
-}
-
-.slot-booked {
-  background-color: #FCEEF2;
-  border: 1px solid #E45A80;
-  color: #E45A80;
+.btn-secondary:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.slot-selected {
-  background-color: #E45A80;
-  border: 1px solid #E45A80;
-  color: #ffffff;
+input,
+textarea,
+select {
+  font-family: var(--font-main);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--color-black);
+  background: #fff;
+  transition: border-color 0.2s ease;
 }
 
-.slot-blocked {
-  background-color: #f5f5f5;
-  border: 1px solid #DDDDDD;
-  color: #9D9D9D;
-  cursor: not-allowed;
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-grey);
 }

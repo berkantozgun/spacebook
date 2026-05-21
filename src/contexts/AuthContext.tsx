@@ -1,133 +1,175 @@
-import {
-  createContext, useContext, useState, useEffect,
-  useCallback,
-} from 'react'
 import type { ReactNode } from 'react'
-import { supabase } from '../lib/supabase'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { Profile, Company, CompanyWithRole } from '../types'
-
-const SELECTED_COMPANY_KEY = 'spacebook_selected_company_id'
+import { supabase } from '../lib/supabase'
 
 interface AuthContextType {
-  profile:          Profile | null
-  companies:        CompanyWithRole[]
-  selectedCompany:  Company | null
-  selectedRole:     'member' | 'admin' | 'display' | null
-  loading:          boolean
-  isSuperAdmin:     boolean
-  isAdmin:          boolean
-  selectCompany:    (company: Company) => void
-  signInWithMagicLink: (email: string) => Promise<{ error: any }>
-  signOut:          () => Promise<void>
-  refreshProfile:   () => Promise<void>
+  profile: Profile | null
+  companies: CompanyWithRole[]
+  selectedCompany: Company | null
+  selectedRole: 'member' | 'admin' | 'display' | null
+  loading: boolean
+  isSuperAdmin: boolean
+  isAdmin: boolean
+  selectCompany: (company: Company) => void
+  signInWithMagicLink: (email: string) => Promise<{ error: unknown }>
+  signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | null>(null)
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [profile,   setProfile]   = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [companies, setCompanies] = useState<CompanyWithRole[]>([])
-  const [selectedCompany, setSelectedCompanyState] = useState<Company | null>(null)
-  const [loading,   setLoading]   = useState(true)
+  const [selectedCompany, setSelectedCompanyState] = useState<Company | null>(
+    null
+  )
+  const [selectedRole, setSelectedRole] = useState<
+    'member' | 'admin' | 'display' | null
+  >(null)
+  const [loading, setLoading] = useState(true)
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
+  // Initialize auth state
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-    if (!prof) { setLoading(false); return }
-    setProfile(prof as Profile)
-
-    // Firma üyeliklerini çek
-    const { data: memberships } = await supabase
-      .from('company_members')
-      .select('id, role, company_id, companies(*)')
-      .eq('user_id', userId)
-
-    if (memberships) {
-      const mapped: CompanyWithRole[] = memberships.map((m: any) => ({
-        company:  m.companies as Company,
-        role:     m.role,
-        memberId: m.id,
-      }))
-      setCompanies(mapped)
-
-      // Önceden seçili firma var mı?
-      const savedId = sessionStorage.getItem(SELECTED_COMPANY_KEY)
-      if (savedId) {
-        const found = mapped.find(m => m.company.id === savedId)
-        if (found) setSelectedCompanyState(found.company)
-        else if (mapped.length === 1) setSelectedCompanyState(mapped[0].company)
-      } else if (mapped.length === 1) {
-        setSelectedCompanyState(mapped[0].company)
-        sessionStorage.setItem(SELECTED_COMPANY_KEY, mapped[0].company.id)
+        if (session?.user) {
+          await loadProfile(session.user.id)
+        }
+      } catch (error) {
+        console.error('Auth init error:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    setLoading(false)
-  }, [])
+    initAuth()
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) fetchProfile(session.user.id)
-      else setLoading(false)
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await loadProfile(session.user.id)
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null)
+        setCompanies([])
+        setSelectedCompanyState(null)
+        setSelectedRole(null)
+        sessionStorage.removeItem('spacebook_selected_company_id')
+      }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) fetchProfile(session.user.id)
-        else {
-          setProfile(null)
-          setCompanies([])
-          setSelectedCompanyState(null)
-          setLoading(false)
+    return () => {
+      subscription?.unsubscribe()
+    }
+  }, [])
+
+  const loadProfile = async (userId: string) => {
+    try {
+      // Load profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (profileError) throw profileError
+
+      setProfile(profileData)
+
+      // Load companies with roles
+      const { data: memberData, error: memberError } = await supabase
+        .from('company_members')
+        .select('company_id, role')
+        .eq('user_id', userId)
+
+      if (memberError) throw memberError
+
+      if (memberData && memberData.length > 0) {
+        const companyIds = memberData.map((m) => m.company_id)
+        const { data: companiesData, error: companiesError } = await supabase
+          .from('companies')
+          .select('*')
+          .in('id', companyIds)
+          .eq('is_active', true)
+
+        if (companiesError) throw companiesError
+
+        const companiesWithRoles: CompanyWithRole[] = (companiesData || []).map(
+          (company) => {
+            const member = memberData.find((m) => m.company_id === company.id)
+            return {
+              ...company,
+              role: member?.role || 'member',
+            }
+          }
+        )
+
+        setCompanies(companiesWithRoles)
+
+        // Restore selected company from session storage
+        const savedCompanyId = sessionStorage.getItem(
+          'spacebook_selected_company_id'
+        )
+        if (savedCompanyId) {
+          const saved = companiesWithRoles.find((c) => c.id === savedCompanyId)
+          if (saved) {
+            setSelectedCompanyState(saved)
+            setSelectedRole(saved.role)
+          }
         }
       }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [fetchProfile])
-
-  function selectCompany(company: Company) {
-    setSelectedCompanyState(company)
-    sessionStorage.setItem(SELECTED_COMPANY_KEY, company.id)
+    } catch (error) {
+      console.error('Load profile error:', error)
+    }
   }
 
-  async function signInWithMagicLink(email: string) {
+  const selectCompany = (company: Company) => {
+    setSelectedCompanyState(company)
+    const companyWithRole = companies.find((c) => c.id === company.id)
+    setSelectedRole(companyWithRole?.role || null)
+    sessionStorage.setItem('spacebook_selected_company_id', company.id)
+  }
+
+  const signInWithMagicLink = async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     })
     return { error }
   }
 
-  async function signOut() {
-    sessionStorage.removeItem(SELECTED_COMPANY_KEY)
+  const signOut = async () => {
     await supabase.auth.signOut()
     setProfile(null)
     setCompanies([])
     setSelectedCompanyState(null)
+    setSelectedRole(null)
+    sessionStorage.removeItem('spacebook_selected_company_id')
   }
 
-  async function refreshProfile() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) await fetchProfile(session.user.id)
+  const refreshProfile = async () => {
+    if (profile) {
+      await loadProfile(profile.id)
+    }
   }
-
-  const selectedMembership = companies.find(
-    c => c.company.id === selectedCompany?.id
-  )
 
   const value: AuthContextType = {
     profile,
     companies,
     selectedCompany,
-    selectedRole: selectedMembership?.role ?? null,
+    selectedRole,
     loading,
-    isSuperAdmin: profile?.is_superadmin ?? false,
-    isAdmin:      selectedMembership?.role === 'admin',
+    isSuperAdmin: profile?.is_superadmin || false,
+    isAdmin: selectedRole === 'admin',
     selectCompany,
     signInWithMagicLink,
     signOut,
@@ -138,7 +180,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth(): AuthContextType {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider')
+  }
+  return context
 }
